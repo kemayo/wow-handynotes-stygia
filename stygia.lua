@@ -41,7 +41,7 @@ ns.RegisterPoints(1543, {
     [18914631] = { note="On the platform", },
 }, {
     requires_item = 184870, -- Stygia Dowser
-    inbag = { 185350, 185632, any=true, }, -- [Partial / Intact] Rune Codex
+    inbag = 185474, -- Armored Husk
     atlas = "vehicle-templeofkotmogu-greenball",
     label = "Stygia Nexus",
     quest = 63684, -- Feral Shadehound quest
