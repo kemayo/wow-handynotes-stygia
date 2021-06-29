@@ -1,4 +1,4 @@
-## Interface: 90005
+## Interface: 90100
 ## Title: HandyNotes: Stygia
 ## Notes: Where are the Stygia gathering nodes in the Maw?
 ## Author: Kemayo
