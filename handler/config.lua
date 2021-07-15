@@ -20,6 +20,7 @@ ns.defaults = {
         tooltip_pointanchor = false,
         tooltip_item = true,
         tooltip_questid = false,
+        groupsHidden = {},
         zonesHidden = {},
         achievementsHidden = {},
         worldmapoverlay = true,
@@ -233,6 +234,18 @@ ns.options = {
                 info.option.values = values
                 return values
             end,
+            hidden = function(info)
+                for uiMapID, points in pairs(ns.points) do
+                    for coord, point in pairs(points) do
+                        if point.achievement then
+                            info.option.hidden = false
+                            return false
+                        end
+                    end
+                end
+                info.option.hidden = true
+                return true
+            end,
             order = 30,
         },
         zonesHidden = {
@@ -261,6 +274,42 @@ ns.options = {
             end,
             order = 35,
         },
+        groupsHidden = {
+            type = "multiselect",
+            name = "Show groups",
+            desc = "Toggle whether to show certain groups of points",
+            get = function(info, key) return not ns.db[info[#info]][key] end,
+            set = function(info, key, value)
+                ns.db[info[#info]][key] = not value
+                ns.HL:Refresh()
+            end,
+            values = function(info)
+                local values = {}
+                for uiMapID, points in pairs(ns.points) do
+                    for coord, point in pairs(points) do
+                        if point.group and not values[point.group] then
+                            values[point.group] = ns.groups[point.group] or point.group
+                        end
+                    end
+                end
+                -- replace ourself with the built values table
+                info.option.values = values
+                return values
+            end,
+            hidden = function(info)
+                for uiMapID, points in pairs(ns.points) do
+                    for coord, point in pairs(points) do
+                        if point.group then
+                            info.option.hidden = false
+                            return false
+                        end
+                    end
+                end
+                info.option.hidden = true
+                return true
+            end,
+            order = 40,
+        }
     },
 }
 
@@ -290,6 +339,7 @@ local function doTest(test, input, ...)
         return test(input, ...)
     end
 end
+ns.doTest = doTest
 local function testMaker(test, override)
     return function(...)
         return (override or doTest)(test, ...)
@@ -526,6 +576,9 @@ ns.should_show_point = function(coord, point, currentZone, isMinimap)
     if ns.hidden[currentZone] and ns.hidden[currentZone][coord] then
         return false
     end
+    if point.group and ns.db.groupsHidden[point.group] then
+        return false
+    end
     if point.ShouldShow and not point:ShouldShow() then
         return false
     end
@@ -555,7 +608,7 @@ ns.should_show_point = function(coord, point, currentZone, isMinimap)
         if point.inbag and itemInBags(point.inbag) then
             return false
         end
-        if point.onquest and C_QuestLog.IsOnQuest(point.onquest) then
+        if point.onquest and C_QuestLog.IsOnQuest(type(point.onquest) == "number" and point.onquest or point.quest) then
             return false
         end
         if point.hide_quest and C_QuestLog.IsQuestFlaggedCompleted(point.hide_quest) then
@@ -577,10 +630,10 @@ ns.should_show_point = function(coord, point, currentZone, isMinimap)
             end
         end
     end
-    if point.requires_buff and not GetPlayerAuraBySpellID(point.requires_buff) then
+    if point.requires_buff and not doTest(GetPlayerAuraBySpellID, point.requires_buff) then
         return false
     end
-    if point.requires_no_buff and GetPlayerAuraBySpellID(point.requires_no_buff) then
+    if point.requires_no_buff and doTest(GetPlayerAuraBySpellID, point.requires_no_buff) then
         return false
     end
     if point.requires_item and not itemInBags(point.requires_item) then
@@ -593,16 +646,10 @@ ns.should_show_point = function(coord, point, currentZone, isMinimap)
         return false
     end
     if not ns.db.upcoming or point.upcoming == false then
-        if point.level and point.level > UnitLevel("player") then
+        if not ns.point_active(point) then
             return false
         end
-        if point.active and point.active.quest and not C_QuestLog.IsQuestFlaggedCompleted(point.active.quest) then
-            return false
-        end
-        if point.active and point.active.notquest and C_QuestLog.IsQuestFlaggedCompleted(point.active.notquest) then
-            return false
-        end
-        if point.hide_before and not allQuestsComplete(point.hide_before) then
+        if ns.point_upcoming(point) then
             return false
         end
     end

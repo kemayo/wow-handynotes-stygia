@@ -24,6 +24,8 @@ ns.currencies = {
     }
 }
 
+ns.groups = {}
+
 ns.points = {
     --[[ structure:
     [uiMapID] = { -- "_terrain1" etc will be stripped from attempts to fetch this
@@ -212,13 +214,15 @@ local trimmed_icon = function(texture)
     end
     return icon_cache[texture]
 end
-local atlas_texture = function(atlas, scale)
+local atlas_texture = function(atlas, extra)
     atlas = C_Texture.GetAtlasInfo(atlas)
-    return {
+    if type(extra) == "number" then
+        extra = {scale=extra}
+    end
+    return ns.merge({
         icon = atlas.file,
         tCoordLeft = atlas.leftTexCoord, tCoordRight = atlas.rightTexCoord, tCoordTop = atlas.topTexCoord, tCoordBottom = atlas.bottomTexCoord,
-        scale = scale or 1,
-    }
+    }, extra)
 end
 ns.atlas_texture = atlas_texture
 local default_textures = {
@@ -343,14 +347,47 @@ local function work_out_texture(point)
     end
     return default_textures[ns.db.default_icon] or default_textures["VignetteLoot"]
 end
+ns.point_active = function(point)
+    if point.IsActive and not point:IsActive() then
+        return false
+    end
+    if not point.active then
+        return true
+    end
+    if point.active.quest and not C_QuestLog.IsQuestFlaggedCompleted(point.active.quest) then
+        return false
+    end
+    if point.active.notquest and C_QuestLog.IsQuestFlaggedCompleted(point.active.notquest) then
+        return false
+    end
+    if point.active.requires_buff and not ns.doTest(GetPlayerAuraBySpellID, point.active.requires_buff) then
+        return false
+    end
+    if point.active.requires_no_buff and ns.doTest(GetPlayerAuraBySpellID, point.active.requires_no_buff) then
+        return false
+    end
+    return true
+end
+ns.point_upcoming = function(point)
+    if point.level and UnitLevel("player") < point.level then
+        return true
+    elseif point.hide_before and not ns.allQuestsComplete(point.hide_before) then
+        return true
+    end
+    return false
+end
 local inactive_cache = {}
 local function get_inactive_texture_variant(icon)
     if not inactive_cache[icon] then
         inactive_cache[icon] = CopyTable(icon)
-        inactive_cache[icon].r = 0.5
-        inactive_cache[icon].g = 0.5
-        inactive_cache[icon].b = 0.5
-        inactive_cache[icon].a = 1
+        if inactive_cache[icon].r then
+            inactive_cache[icon].a = 0.5
+        else
+            inactive_cache[icon].r = 0.5
+            inactive_cache[icon].g = 0.5
+            inactive_cache[icon].b = 0.5
+            inactive_cache[icon].a = 1
+        end
     end
     return inactive_cache[icon]
 end
@@ -369,13 +406,9 @@ local get_point_info = function(point, isMinimap)
     if point then
         local label = work_out_label(point)
         local icon = work_out_texture(point)
-        if point.active and point.active.quest and not C_QuestLog.IsQuestFlaggedCompleted(point.active.quest) then
+        if not ns.point_active(point) then
             icon = get_inactive_texture_variant(icon)
-        elseif point.active and point.active.notquest and C_QuestLog.IsQuestFlaggedCompleted(point.active.notquest) then
-            icon = get_inactive_texture_variant(icon)
-        elseif point.level and UnitLevel("player") < point.level then
-            icon = get_upcoming_texture_variant(icon)
-        elseif point.hide_before and not ns.allQuestsComplete(point.hide_before) then
+        elseif ns.point_upcoming(point) then
             icon = get_upcoming_texture_variant(icon)
         end
         local category = "treasure"
@@ -394,6 +427,21 @@ local get_point_info = function(point, isMinimap)
 end
 local get_point_info_by_coord = function(uiMapID, coord)
     return get_point_info(ns.points[uiMapID] and ns.points[uiMapID][coord])
+end
+local get_point_progress = function(point)
+    if type(point.progress) == "number" then
+        -- shortcut: if the progress is an objective of the tracking quest
+        return select(4, GetQuestObjectiveInfo(point.quest, point.progress, false))
+    elseif type(point.progress) == "table" then
+        for i, q in ipairs(point.progress) do
+            if not C_QuestLog.IsQuestFlaggedCompleted(q) then
+                return i - 1, #point.progress
+            end
+        end
+    else
+        -- function
+        return point:progress()
+    end
 end
 
 local function handle_tooltip(tooltip, point)
@@ -513,6 +561,12 @@ local function handle_tooltip(tooltip, point)
 
         if point.quest and ns.db.tooltip_questid then
             tooltip:AddDoubleLine("QuestID", render_string_list("questid", point.quest), NORMAL_FONT_COLOR:GetRGB())
+        end
+        if point.progress then
+            local fulfilled, required = get_point_progress(point)
+            if fulfilled and required then
+                tooltip:AddDoubleLine(PVP_PROGRESS_REWARDS_HEADER, GENERIC_FRACTION_STRING:format(fulfilled, required))
+            end
         end
 
         if (ns.db.tooltip_item or IsShiftKeyDown()) and (point.loot or point.npc) then
