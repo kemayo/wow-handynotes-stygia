@@ -136,15 +136,19 @@ ns.RegisterPoints(1543, {
     atlas = "vehicle-templeofkotmogu-greenball",
     label = "Stygia Nexus",
     quest = 63684, -- Feral Shadehound quest
+    group = "Stygia Nexus",
+})
+
 ns.RegisterPoints(1543, {
     [24007550] = {
         requires_item = 184870, -- Stygia Dowser
         inbag = 185056, -- Crumbling Stele
         loot = {185056}, -- Crumbling Stele
         label = "Rune puzzle",
-        note = "Grapple up here, use your {item:184870}, then solve the puzzle by swapping runes to match the order they're found on the pillars around the platform",
+        note = "Grapple up here, use your {item:184870}, then solve the puzzle by swapping runes to match the order they're found on the pillars around the platform. Once you have this you can buy the {item:185350} from {npc:162804:Ve'nari}",
         atlas = "reagents",
         quest = 63684, -- Feral Shadehound quest
+        group = "Feral Shadehound",
     }
 })
 
@@ -158,6 +162,7 @@ ns.RegisterPoints(1543, {
     minimap = true,
     icon = true,
     quest = 63684, -- Feral Shadehound quest
+    group = "Feral Shadehound",
 })
 
 ns.RegisterPoints(1543, {
@@ -175,6 +180,7 @@ ns.RegisterPoints(1543, {
     minimap = true,
     inbag = {185474, 185471, 185475, any=true}, -- Armored Husk, Willing Wolf Soul, Feral Shadehound
     quest = 63684, -- Feral Shadehound quest
+    group = "Feral Shadehound",
 })
 
 ns.RegisterPoints(1543, {
@@ -190,16 +196,18 @@ ns.RegisterPoints(1543, {
     requires_item = {185474}, -- Armored Husk
     inbag = {185471, 185475, any=true}, -- Willing Wolf Soul, Feral Shadehound
     quest = 63684, -- Feral Shadehound quest
+    group = "Feral Shadehound",
 })
 
 ns.RegisterPoints(1543, {
     [45104830] = {
         label = "Binding Altar",
-        note = "Bind the soul to the husk.",
+        note = "Bind the soul to the husk. Read your {item:185056} for the order to use the runes",
         atlas = "reagents",
         minimap = true,
         requires_item = 185471, -- Willing Wolf Soul
         inbag = 185475, -- Feral Shadehound
         quest = 63684, -- Feral Shadehound quest
+        group = "Feral Shadehound",
     },
 })
