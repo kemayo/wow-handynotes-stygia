@@ -136,6 +136,16 @@ ns.RegisterPoints(1543, {
     atlas = "vehicle-templeofkotmogu-greenball",
     label = "Stygia Nexus",
     quest = 63684, -- Feral Shadehound quest
+ns.RegisterPoints(1543, {
+    [24007550] = {
+        requires_item = 184870, -- Stygia Dowser
+        inbag = 185056, -- Crumbling Stele
+        loot = {185056}, -- Crumbling Stele
+        label = "Rune puzzle",
+        note = "Grapple up here, use your {item:184870}, then solve the puzzle by swapping runes to match the order they're found on the pillars around the platform",
+        atlas = "reagents",
+        quest = 63684, -- Feral Shadehound quest
+    }
 })
 
 ns.RegisterPoints(1543, {
