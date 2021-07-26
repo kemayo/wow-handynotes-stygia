@@ -5,6 +5,7 @@ ns.hiddenConfig = {
     display = true,
     achievementsHidden = true,
     zonesHidden = true,
+    groupsHiddenByZone = true,
 }
 
 ns.RegisterPoints(1543, {

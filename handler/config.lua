@@ -21,6 +21,7 @@ ns.defaults = {
         tooltip_item = true,
         tooltip_questid = false,
         groupsHidden = {},
+        groupsHiddenByZone = {['*']={},},
         zonesHidden = {},
         achievementsHidden = {},
         worldmapoverlay = true,
@@ -41,9 +42,7 @@ ns.options = {
         ns.HL:Refresh()
     end,
     hidden = function(info)
-        if ns.hiddenConfig then
-            return ns.hiddenConfig[info[#info]]
-        end
+        return ns.hiddenConfig[info[#info]]
     end,
     args = {
         icon = {
@@ -238,8 +237,8 @@ ns.options = {
                 for uiMapID, points in pairs(ns.points) do
                     for coord, point in pairs(points) do
                         if point.achievement then
-                            info.option.hidden = false
-                            return false
+                            info.option.hidden = nil
+                            return ns.options.hidden(info)
                         end
                     end
                 end
@@ -300,8 +299,8 @@ ns.options = {
                 for uiMapID, points in pairs(ns.points) do
                     for coord, point in pairs(points) do
                         if point.group then
-                            info.option.hidden = false
-                            return false
+                            info.option.hidden = nil
+                            return ns.options.hidden(info)
                         end
                     end
                 end
@@ -576,7 +575,7 @@ ns.should_show_point = function(coord, point, currentZone, isMinimap)
     if ns.hidden[currentZone] and ns.hidden[currentZone][coord] then
         return false
     end
-    if point.group and ns.db.groupsHidden[point.group] then
+    if point.group and ns.db.groupsHidden[point.group] or ns.db.groupsHiddenByZone[currentZone][point.group] then
         return false
     end
     if point.ShouldShow and not point:ShouldShow() then
@@ -640,9 +639,6 @@ ns.should_show_point = function(coord, point, currentZone, isMinimap)
         return false
     end
     if point.requires_worldquest and not C_TaskQuest.IsActive(point.requires_worldquest) then
-        return false
-    end
-    if point.covenant and point.covenant ~= C_Covenants.GetActiveCovenantID() then
         return false
     end
     if not ns.db.upcoming or point.upcoming == false then

@@ -9,11 +9,11 @@ ns.HL = HL
 -- Data model stuff:
 
 -- flags for whether to show minimap icons in some zones, if Blizzard ever does the treasure-map thing again
-ns.map_spellids = {
+ns.map_spellids = ns.map_spellids or {
     -- zone = spellid
 }
 
-ns.currencies = {
+ns.currencies = ns.currencies or {
     ANIMA = {
         name = '|cffff8000' .. POWER_TYPE_ANIMA .. '|r',
         texture = select(10, GetAchievementInfo(14339)),
@@ -23,8 +23,17 @@ ns.currencies = {
         texture = select(10, GetAchievementInfo(11144)),
     }
 }
+-- for fallbacks
+ns.covenants = ns.covenants or {
+    [Enum.CovenantType.Kyrian] = "Kyrian",
+    [Enum.CovenantType.Necrolord] = "Necrolords",
+    [Enum.CovenantType.NightFae] = "NightFae",
+    [Enum.CovenantType.Venthyr] = "Venthyr",
+}
 
-ns.groups = {}
+ns.groups = ns.groups or {}
+
+ns.hiddenConfig = ns.hiddenConfig or {}
 
 ns.points = {
     --[[ structure:
@@ -71,6 +80,9 @@ ns.nodeMaker = function(defaults)
     local meta = {__index = defaults}
     return function(details)
         details = details or {}
+        if details.note and defaults.note then
+            details.note = details.note .. "\n" .. defaults.note
+        end
         local meta2 = getmetatable(details)
         if meta2 and meta2.__index then
             return setmetatable(details, {__index = ns.merge(CopyTable(defaults), meta2.__index)})
@@ -366,12 +378,19 @@ ns.point_active = function(point)
     if point.active.requires_no_buff and ns.doTest(GetPlayerAuraBySpellID, point.active.requires_no_buff) then
         return false
     end
+    if point.active.covenant and point.active.covenant ~= C_Covenants.GetActiveCovenantID() then
+        return false
+    end
     return true
 end
 ns.point_upcoming = function(point)
     if point.level and UnitLevel("player") < point.level then
         return true
-    elseif point.hide_before and not ns.allQuestsComplete(point.hide_before) then
+    end
+    if point.hide_before and not ns.allQuestsComplete(point.hide_before) then
+        return true
+    end
+    if point.covenant and point.covenant ~= C_Covenants.GetActiveCovenantID() then
         return true
     end
     return false
@@ -438,6 +457,7 @@ local get_point_progress = function(point)
                 return i - 1, #point.progress
             end
         end
+        return #point.progress, #point.progress
     else
         -- function
         return point:progress()
@@ -495,7 +515,7 @@ local function handle_tooltip(tooltip, point)
                 local criteria, _, complete, _, _, _, _, _, quantityString = GetAchievementCriteriaInfo(point.achievement, 1)
                 if quantityString then
                     tooltip:AddDoubleLine(
-                        criteria, quantityString,
+                        (criteria and #criteria > 0) and criteria or PVP_PROGRESS_REWARDS_HEADER, quantityString,
                         complete and 0 or 1, complete and 1 or 0, 0,
                         complete and 0 or 1, complete and 1 or 0, 0
                     )
@@ -507,8 +527,12 @@ local function handle_tooltip(tooltip, point)
                 end
             end
         end
+        if point.active and point.active.note then
+            local isActive = ns.point_active(point)
+            tooltip:AddLine(render_string(point.active.note), isActive and 0 or 1, isActive and 1 or 0, 0, true)
+        end
         if point.note then
-            tooltip:AddLine(render_string(point.note), nil, nil, nil, true)
+            tooltip:AddLine(render_string(point.note), 1, 1, 1, true)
         end
         if point.loot then
             for _, item in ipairs(point.loot) do
@@ -524,9 +548,7 @@ local function handle_tooltip(tooltip, point)
                         if item.covenant then
                             local data = C_Covenants.GetCovenantData(item.covenant)
                             -- local active = item.covenant == C_Covenants.GetActiveCovenantID()
-                            if data then
-                                link = TEXT_MODE_A_STRING_VALUE_TYPE:format(link, COVENANT_COLORS[item.covenant]:WrapTextInColorCode(data.name))
-                            end
+                            link = TEXT_MODE_A_STRING_VALUE_TYPE:format(link, COVENANT_COLORS[item.covenant]:WrapTextInColorCode(data and data.name or ns.covenants[item.covenant]))
                         end
                         if item.class then
                             link = TEXT_MODE_A_STRING_VALUE_TYPE:format(link, RAID_CLASS_COLORS[item.class]:WrapTextInColorCode(LOCALIZED_CLASS_NAMES_FEMALE[item.class]))
@@ -547,10 +569,9 @@ local function handle_tooltip(tooltip, point)
         end
         if point.covenant then
             local data = C_Covenants.GetCovenantData(point.covenant)
-            if data then
-                local active = point.covenant == C_Covenants.GetActiveCovenantID()
-                tooltip:AddLine(ITEM_REQ_SKILL:format(data.name), active and 0 or 1, active and 1 or 0, 0)
-            end
+            local active = point.covenant == C_Covenants.GetActiveCovenantID()
+            local cname = COVENANT_COLORS[point.covenant]:WrapTextInColorCode(data and data.name or ns.covenants[point.covenant])
+            tooltip:AddLine(ITEM_REQ_SKILL:format(cname), active and 0 or 1, active and 1 or 0, 0)
         end
         if point.level and point.level > UnitLevel("player") then
             tooltip:AddLine(ITEM_MIN_LEVEL:format(point.level), 1, 0, 0)
@@ -671,6 +692,39 @@ local function hideNode(button, uiMapID, coord)
     ns.hidden[uiMapID][coord] = true
     HL:Refresh()
 end
+local function hideGroup(button, uiMapID, coord)
+    local point = ns.points[uiMapID] and ns.points[uiMapID][coord]
+    if not (point and point.group) then return end
+    ns.db.groupsHidden[point.group] = true
+    HL:Refresh()
+end
+local function hideGroupZone(button, uiMapID, coord)
+    local point = ns.points[uiMapID] and ns.points[uiMapID][coord]
+    if not (point and point.group) then return end
+    ns.db.groupsHiddenByZone[uiMapID][point.group] = true
+    HL:Refresh()
+end
+
+local function sendToChat(button, uiMapID, coord)
+    local title = get_point_info_by_coord(uiMapID, coord)
+    local x, y = HandyNotes:getXY(coord)
+    local message = ("%s|cffffff00|Hworldmap:%d:%d:%d|h[%s]|h|r"):format(
+        title and (title .. " ") or "",
+        uiMapID,
+        x * 10000,
+        y * 10000,
+        -- Can't do this:
+        -- core:GetMobLabel(self.data.id) or UNKNOWN
+        -- WoW seems to filter out anything which isn't the standard MAP_PIN_HYPERLINK
+        MAP_PIN_HYPERLINK
+    )
+    PlaySound(SOUNDKIT.UI_MAP_WAYPOINT_CHAT_SHARE)
+    -- if you have an open editbox, just paste to it
+    if not ChatEdit_InsertLink(message) then
+        -- open the chat to whatever it was on and add the text
+        ChatFrame_OpenChat(message)
+    end
+end
 
 local function closeAllDropdowns()
     CloseDropDownMenus(1)
@@ -679,7 +733,8 @@ end
 do
     local currentZone, currentCoord
     local function generateMenu(button, level)
-        if (not level) then return end
+        local point = ns.points[currentZone] and ns.points[currentZone][currentCoord]
+        if not (level and point) then return end
         local info = UIDropDownMenu_CreateInfo()
         if (level == 1) then
             -- Create the title of the menu
@@ -700,6 +755,14 @@ do
                 wipe(info)
             end
 
+            info.text = COMMUNITIES_INVITE_MANAGER_LINK_TO_CHAT -- Link to chat
+            info.notCheckable = 1
+            info.func = sendToChat
+            info.arg1 = currentZone
+            info.arg2 = currentCoord
+            UIDropDownMenu_AddButton(info, level)
+            wipe(info)
+
             -- Hide menu item
             info.text         = "Hide node"
             info.notCheckable = 1
@@ -708,6 +771,28 @@ do
             info.arg2         = currentCoord
             UIDropDownMenu_AddButton(info, level)
             wipe(info)
+
+            if point.group then
+                if not ns.hiddenConfig.groupsHiddenByZone then
+                    local map = C_Map.GetMapInfo(currentZone)
+                    info.text = "Hide all " .. (ns.groups[point.group] or point.group) .. " in " .. (map and map.name or "this zone")
+                    info.notCheckable = 1
+                    info.func = hideGroupZone
+                    info.arg1 = currentZone
+                    info.arg2 = currentCoord
+                    UIDropDownMenu_AddButton(info, level)
+                    wipe(info)
+                end
+                if not ns.hiddenConfig.groupsHidden then
+                    info.text = "Hide all " .. (ns.groups[point.group] or point.group) .. " in all zones"
+                    info.notCheckable = 1
+                    info.func = hideGroup
+                    info.arg1 = currentZone
+                    info.arg2 = currentCoord
+                    UIDropDownMenu_AddButton(info, level)
+                    wipe(info)
+                end
+            end
 
             -- Close menu item
             info.text         = "Close"
@@ -722,12 +807,18 @@ do
     HL_Dropdown.initialize = generateMenu
 
     function HLHandler:OnClick(button, down, uiMapID, coord)
+        if down then return end
         currentZone = uiMapID
         currentCoord = coord
         -- given we're in a click handler, this really *should* exist, but just in case...
         local point = ns.points[currentZone] and ns.points[currentZone][currentCoord]
-        if point and button == "RightButton" and not down then
-            ToggleDropDownMenu(1, nil, HL_Dropdown, self, 0, 0)
+        if point then
+            if button == "RightButton" then
+                ToggleDropDownMenu(1, nil, HL_Dropdown, self, 0, 0)
+            end
+            if button == "LeftButton" and IsShiftKeyDown() then
+                sendToChat(button, uiMapID, coord)
+            end
         end
     end
 end
