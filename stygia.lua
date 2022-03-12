@@ -168,6 +168,7 @@ ns.RegisterPoints(1543, {
 
 ns.RegisterPoints(1543, {
     [35604180] = { -- Soulforger's Tools
+        quest = 63667, -- on pickup
         loot = {185473},
         note = "Loot from {npc:166398:Soulforger Rhovus}, use to make {item:185474}",
         hide_before = ns.conditions.QuestComplete(63668), -- All three pages used
