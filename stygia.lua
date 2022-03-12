@@ -143,43 +143,46 @@ ns.RegisterPoints(1543, {
 ns.RegisterPoints(1543, {
     [24007550] = {
         requires_item = 184870, -- Stygia Dowser
-        inbag = 185056, -- Crumbling Stele
         loot = {185056}, -- Crumbling Stele
         label = "Rune puzzle",
-        note = "Grapple up here, use your {item:184870}, then solve the puzzle by swapping runes to match the order they're found on the pillars around the platform. Once you have this you can buy the {item:185350} from {npc:162804:Ve'nari}",
+        note = "Grapple up here, use your {item:184870}, then solve the puzzle by swapping runes to match the order they're found on the pillars around the platform (starting with the one to the left of the entrance point, continuing clockwise). Once you have this you can buy the {item:185350} from {npc:162804:Ve'nari}",
         atlas = "reagents",
-        quest = 63684, -- Feral Shadehound quest
+        quest = 63611,
         group = "Feral Shadehound",
     }
 })
 
 ns.RegisterPoints(1543, {
-    [24601260] = { loot={185353}, }, -- Page: Binding
-    [27906060] = { loot={185352}, }, -- Page: Souls
-    [48808470] = { loot={185351}, }, -- Page: Forging
+    [48808470] = { quest=63641, loot={185351}, note="At the back-left of this cave", }, -- Page: Forging
+    [27906060] = { quest=63642, loot={185352}, }, -- Page: Souls
+    [24601260] = { quest=63643, loot={185353}, note="On the upper level", }, -- Page: Binding
+    [27701290] = { quest=63643, loot={185353}, note="During the Venthyr Assault", }, -- Page: Binding
 }, {
     requires_item = 185350, -- Partial Rune Codex
     inbag = 185632, -- Intact Rune Codex
     minimap = true,
     icon = true,
-    quest = 63684, -- Feral Shadehound quest
+    quest = 63668, -- All three pages used
     group = "Feral Shadehound",
 })
 
 ns.RegisterPoints(1543, {
     [35604180] = { -- Soulforger's Tools
-        item = 185473,
+        loot = {185473},
         note = "Loot from {npc:166398:Soulforger Rhovus}, use to make {item:185474}",
-        requires_item = 185632, -- Intact Rune Codex
+        hide_before = 63668, -- All three pages used
     },
     [20206700] = { --Soulsteel Anvil
         npc = 177392,
         atlas = "repair",
+        loot = {185474}, -- Armored Husk
         requires_item = 185473, -- Soulforger's Tools
+        note = "Farm up 200x {item:185618} and 200x {item:185617} to make 10x {item:185630}",
     },
 }, {
     minimap = true,
-    inbag = {185474, 185471, 185475, any=true}, -- Armored Husk, Willing Wolf Soul, Feral Shadehound
+    hide_before = 63668, -- all pages read
+    inbag = {185474, 185475, any=true}, -- Armored Husk, Feral Shadehound
     quest = 63684, -- Feral Shadehound quest
     group = "Feral Shadehound",
 })
@@ -191,12 +194,11 @@ ns.RegisterPoints(1543, {
     [52801430] = {},
 }, {
     npc = 177195, -- Stray Soul
-    item = 185471, -- Willing Wolf Soul
+    loot = {185471}, -- Willing Wolf Soul
     atlas = "poi-soulspiritghost",
-    note = "Wanders the length of Gorgoa: the River of Souls, walking from south to north then despawning",
-    requires_item = {185474}, -- Armored Husk
-    inbag = {185471, 185475, any=true}, -- Willing Wolf Soul, Feral Shadehound
-    quest = 63684, -- Feral Shadehound quest
+    note = "Wanders the length of Gorgoa: the River of Souls, walking from south to north then despawning. It'll flash on your minimap when you're close.",
+    hide_before = 63668, -- all three pages read
+    quest = 63666,
     group = "Feral Shadehound",
 })
 
@@ -206,7 +208,7 @@ ns.RegisterPoints(1543, {
         note = "Bind the soul to the husk. Read your {item:185056} for the order to use the runes",
         atlas = "reagents",
         minimap = true,
-        requires_item = 185471, -- Willing Wolf Soul
+        requires_item = {185471, 185474}, -- Willing Wolf Soul, Armored Husk
         inbag = 185475, -- Feral Shadehound
         quest = 63684, -- Feral Shadehound quest
         group = "Feral Shadehound",
