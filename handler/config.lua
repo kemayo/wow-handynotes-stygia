@@ -329,7 +329,7 @@ local function doTestAny(test, input, ...)
     return false
 end
 local function doTest(test, input, ...)
-    if type(input) == "table" then
+    if type(input) == "table" and not input.__parent then
         if input.any then
             return doTestAny(test, input, ...)
         end
@@ -349,12 +349,22 @@ local itemInBags = testMaker(function(item) return GetItemCount(item, true) > 0 
 local allQuestsComplete = testMaker(function(quest) return C_QuestLog.IsQuestFlaggedCompleted(quest) end)
 ns.allQuestsComplete = allQuestsComplete
 
+local temp_criteria = {}
 local allCriteriaComplete = testMaker(function(criteria, achievement)
     local _, _, completed, _, _, completedBy = (criteria < 40 and GetAchievementCriteriaInfo or GetAchievementCriteriaInfoByID)(achievement, criteria)
     if not (completed and (not completedBy or completedBy == ns.playerName)) then
         return false
     end
     return true
+end, function(test, input, achievement, ...)
+    if input == true then
+        wipe(temp_criteria)
+        for i=1,GetAchievementNumCriteria(achievement) do
+            table.insert(temp_criteria, i)
+        end
+        input = temp_criteria
+    end
+    return doTest(test, input, achievement, ...)
 end)
 
 local brokenItems = {
@@ -467,6 +477,7 @@ ns.itemIsKnown = function(item)
         if item.mount then return PlayerHasMount(item.mount) end
         if item.pet then return PlayerHasPet(item.pet) end
         if item.quest then return C_QuestLog.IsQuestFlaggedCompleted(item.quest) or C_QuestLog.IsOnQuest(item.quest) end
+        if item.questComplete then return C_QuestLog.IsQuestFlaggedCompleted(item.questComplete) end
         if CanLearnAppearance(item[1]) then return HasAppearance(item[1]) end
     elseif CanLearnAppearance(item) then
         return HasAppearance(item)
@@ -614,6 +625,9 @@ ns.should_show_point = function(coord, point, currentZone, isMinimap)
             -- This is distinct from point.quest as it's supposed to be for
             -- other trackers that make the point not _complete_ but still
             -- hidden (Draenor treasure maps, so far):
+            return false
+        end
+        if point.found and ns.conditions.check(point.found) then
             return false
         end
     end

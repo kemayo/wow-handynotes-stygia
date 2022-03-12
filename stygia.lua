@@ -170,7 +170,7 @@ ns.RegisterPoints(1543, {
     [35604180] = { -- Soulforger's Tools
         loot = {185473},
         note = "Loot from {npc:166398:Soulforger Rhovus}, use to make {item:185474}",
-        hide_before = 63668, -- All three pages used
+        hide_before = ns.conditions.QuestComplete(63668), -- All three pages used
     },
     [20206700] = { --Soulsteel Anvil
         npc = 177392,
@@ -181,7 +181,7 @@ ns.RegisterPoints(1543, {
     },
 }, {
     minimap = true,
-    hide_before = 63668, -- all pages read
+    hide_before = ns.conditions.QuestComplete(63668), -- all pages read
     inbag = {185474, 185475, any=true}, -- Armored Husk, Feral Shadehound
     quest = 63684, -- Feral Shadehound quest
     group = "Feral Shadehound",
@@ -197,7 +197,7 @@ ns.RegisterPoints(1543, {
     loot = {185471}, -- Willing Wolf Soul
     atlas = "poi-soulspiritghost",
     note = "Wanders the length of Gorgoa: the River of Souls, walking from south to north then despawning. It'll flash on your minimap when you're close.",
-    hide_before = 63668, -- all three pages read
+    hide_before = ns.conditions.QuestComplete(63668), -- all three pages read
     quest = 63666,
     group = "Feral Shadehound",
 })
