@@ -1,6 +1,6 @@
 local myname, ns = ...
 
-ns.SetupMapOverlay = nil
+ns.overlayTexture = 3743739 -- INV_STYGIA
 
 ns.hiddenConfig = {
     default_icon = true,
