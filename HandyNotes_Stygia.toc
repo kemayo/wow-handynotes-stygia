@@ -9,11 +9,6 @@
 ## X-Curse-Project-ID: 456077
 ## SavedVariables: HandyNotes_StygiaDB
 ## RequiredDeps: HandyNotes
-## OptionalDeps: !LibUIDropDownMenu
-
-#@non-debug@
-# lib\LibUIDropDownMenu\LibUIDropDownMenu.xml
-#@end-non-debug@
 
 handler\handler.xml
 
